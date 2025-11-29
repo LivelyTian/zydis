@@ -1,0 +1,42 @@
+name: Build Zydis (Windows MSVC)
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        arch: [x64]  # 可添加 x86
+
+    env:
+      BUILD_DIR: ${{ github.workspace }}/build
+
+    steps:
+      - name: Checkout Repository with Submodules
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive  # 至关重要：Zydis 依赖 Zycore 子模块
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B "${{ env.BUILD_DIR }}" `
+            -A ${{ matrix.arch }} `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+
+      - name: Build Static Library
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zydis-${{ matrix.arch }}-${{ matrix.build_type }}
+          path: ${{ env.BUILD_DIR }}/Zydis/${{ matrix.build_type }}/
+          if-no-files-found: error
