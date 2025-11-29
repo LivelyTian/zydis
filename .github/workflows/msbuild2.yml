@@ -1,0 +1,42 @@
+name: Build Zydis (Windowsdddd MSVC)
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        arch: [x64]
+
+    env:
+      BUILD_DIR: ${{ github.workspace }}/build
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B "${{ env.BUILD_DIR }}" `
+            -A ${{ matrix.arch }} `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+            -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${{ env.BUILD_DIR }}/lib `
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${{ env.BUILD_DIR }}/lib
+
+      - name: Build
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ matrix.build_type }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zydis-${{ matrix.arch }}-${{ matrix.build_type }}
+          path: ${{ env.BUILD_DIR }}/lib/${{ matrix.build_type }}/
+          if-no-files-found: error
